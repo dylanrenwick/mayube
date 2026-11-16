@@ -49,7 +49,7 @@ class AvatarModel
     {
         $database = DatabaseFactory::getFactory()->getConnection();
 
-        $query = $database->prepare("SELECT user_has_avatar FROM users WHERE id = :user_id LIMIT 1");
+        $query = $database->prepare("SELECT has_avatar FROM users WHERE id = :user_id LIMIT 1");
         $query->execute(array(':user_id' => $user_id));
 
         if ($query->fetch()->user_has_avatar) {
