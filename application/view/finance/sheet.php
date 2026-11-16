@@ -5,22 +5,21 @@
 			event.preventDefault();
 			console.log('click');
 			
-			const newSheetForm = document.getElementById('new-sheet-form');
-			if (newSheetForm === null) {
+			const newTransactionForm = document.getElementById('new-transaction-form');
+			if (newTransactionForm === null) {
 				console.error("Could not find '#new-sheet-form'");
 				return;
 			}
 
-			const styles = newSheetForm.attributeStyleMap;
-			const val = styles.get('display');
+			const val = newTransactionForm.style.getPropertyValue('display');
 			const isHidden = val == 'none';
 
-			styles.set('display', isHidden ? 'block' : 'none');
+			newTransactionForm.style.setProperty('display', isHidden ? 'block' : 'none');
 		}
 	</script>
 	<span class='new-list-item-button'>
 		<a href='#' onclick='newSheetClick(event)'>New Transaction</a>
-		<div id='new-sheet-form' style='display:none;'>
+		<div id='new-transaction-form' style='display:none;'>
 			<form method='get' action='<?= Config::get('URL'); ?>finance/createTransaction'>
 				<input type='hidden' name='sheet_id' value='<?= $this->sheet->id; ?>' />
 				<input type='date' name='timestamp' value='<?= date('Y-m-d'); ?>' required />
