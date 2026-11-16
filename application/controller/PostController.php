@@ -22,6 +22,7 @@ class PostController extends Controller
         $showHidden = LoginModel::isUserLoggedIn();
         $this->View->render("post/index", [
             "posts" => PostModel::getAllPosts(0, $showHidden),
+			"title" => "Blog",
         ]);
     }
 
@@ -37,6 +38,7 @@ class PostController extends Controller
         $this->View->render("post/post", [
             "post" => PostModel::getPost($post_id),
             "series_info" => SeriesPostModel::getSeriesInfoByPost($post_id),
+			"title" => $post->title,
         ]);
     }
 
@@ -69,6 +71,7 @@ class PostController extends Controller
         if ($post_id >= 0) {
             $params["post"] = PostModel::getPost($post_id);
         }
+		$params["title"] = "Editing Post";
         $this->View->render("post/edit", $params);
     }
 
