@@ -69,8 +69,8 @@ class PasswordResetModel
         $database = DatabaseFactory::getFactory()->getConnection();
 
         $sql = "UPDATE users
-                SET user_password_reset_hash = :user_password_reset_hash, user_password_reset_timestamp = :user_password_reset_timestamp
-                WHERE user_name = :user_name AND user_provider_type = :provider_type LIMIT 1";
+                SET password_reset_hash = :user_password_reset_hash, password_reset_timestamp = :user_password_reset_timestamp
+                WHERE username = :user_name AND provider_type = :provider_type LIMIT 1";
         $query = $database->prepare($sql);
         $query->execute(array(
             ':user_password_reset_hash' => $user_password_reset_hash, ':user_name' => $user_name,
@@ -128,11 +128,11 @@ class PasswordResetModel
         $database = DatabaseFactory::getFactory()->getConnection();
 
         // check if user-provided username + verification code combination exists
-        $sql = "SELECT user_id, user_password_reset_timestamp
+        $sql = "SELECT id, password_reset_timestamp
                   FROM users
-                 WHERE user_name = :user_name
-                       AND user_password_reset_hash = :user_password_reset_hash
-                       AND user_provider_type = :user_provider_type
+                 WHERE name = :user_name
+                       AND password_reset_hash = :user_password_reset_hash
+                       AND provider_type = :user_provider_type
                  LIMIT 1";
         $query = $database->prepare($sql);
         $query->execute(array(
@@ -177,9 +177,9 @@ class PasswordResetModel
     {
         $database = DatabaseFactory::getFactory()->getConnection();
 
-        $sql = "UPDATE users SET user_password_hash = :user_password_hash, user_password_reset_hash = NULL,
-                       user_password_reset_timestamp = NULL
-                 WHERE user_name = :user_name AND user_provider_type = :user_provider_type LIMIT 1";
+        $sql = "UPDATE users SET password_hash = :user_password_hash, password_reset_hash = NULL,
+                       password_reset_timestamp = NULL
+                 WHERE username = :user_name AND provider_type = :user_provider_type LIMIT 1";
         $query = $database->prepare($sql);
         $query->execute(array(
             ':user_password_hash' => $user_password_hash,
@@ -269,9 +269,9 @@ class PasswordResetModel
     {
         $database = DatabaseFactory::getFactory()->getConnection();
 
-        $sql = "UPDATE users SET user_password_hash = :user_password_hash
-                 WHERE user_name = :user_name
-                 AND user_provider_type = :user_provider_type LIMIT 1";
+        $sql = "UPDATE users SET password_hash = :user_password_hash
+                 WHERE username = :user_name
+                 AND provider_type = :user_provider_type LIMIT 1";
         $query = $database->prepare($sql);
         $query->execute(array(
             ':user_password_hash' => $user_password_hash, ':user_name' => $user_name,
@@ -328,7 +328,7 @@ class PasswordResetModel
     {
         $database = DatabaseFactory::getFactory()->getConnection();
 
-        $sql = "SELECT user_password_hash, user_failed_logins FROM users WHERE user_name = :user_name LIMIT 1;";
+        $sql = "SELECT password_hash, failed_logins FROM users WHERE username = :user_name LIMIT 1;";
         $query = $database->prepare($sql);
         $query->execute(array(
             ':user_name' => $user_name
