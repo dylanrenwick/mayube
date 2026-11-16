@@ -38,7 +38,7 @@
         <meta property="og:description" content="<?= $safeText; ?>" />
     <?php } ?>
     
-    <title>SkidsDev</title>
+	<title>Mayube<?php if (!empty($this->title)) echo " | ".$this->title; ?></title>
     <!-- META -->
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
