@@ -227,7 +227,7 @@ a.list-item-title:hover {
     color: #9c3a43;
 }
 
-.new-list-item-button {
+.new-list-item-container {
     position: absolute;
     right: 0;
     top: 20px;

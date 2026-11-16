@@ -21,20 +21,22 @@
         window.location.href = rootUrl + "post/delete/" + postID;
     }
 </script>
-<span class='new-list-item-button'>
-    <?php
-        $this->renderComponent('twitterShare', array(
-            'url' => Config::get('URL') . 'post/post/' . $this->post->id,
-            'text' => $this->post->title,
-            'via' => 'kaho_nes'
-        ));
-    ?>
-    <?php if (!$this->post->active) { ?><a title="Publish Post" onclick='publishPost();'><i class="fas fa-rss"></i></a><?php } ?>
-    <?php if ($this->post->user_id === Session::get('user_id')) { ?>
-        <a title="Edit Post" href="<?= Config::get('URL'); ?>post/edit/<?= $this->post->id; ?>"><i class="fas fa-edit"></i></a>
-        <a title="Delete Post" onclick='deletePost();'><i class="fas fa-trash"></i></a>
-    <?php } ?>
-</span>
+<div class='new-list-item-container'>
+	<span class='new-list-item-button'>
+		<?php
+			$this->renderComponent('twitterShare', array(
+				'url' => Config::get('URL') . 'post/post/' . $this->post->id,
+				'text' => $this->post->title,
+				'via' => 'kaho_nes'
+			));
+		?>
+		<?php if (!$this->post->active) { ?><a title="Publish Post" onclick='publishPost();'><i class="fas fa-rss"></i></a><?php } ?>
+		<?php if ($this->post->user_id === Session::get('user_id')) { ?>
+			<a title="Edit Post" href="<?= Config::get('URL'); ?>post/edit/<?= $this->post->id; ?>"><i class="fas fa-edit"></i></a>
+			<a title="Delete Post" onclick='deletePost();'><i class="fas fa-trash"></i></a>
+		<?php } ?>
+	</span>
+</div>
 <span class='post-subtitle'>By <?= $this->post->user_name; ?> on <?= $this->post->created_at; ?></span>
 <?php
     $this->renderComponent('seriesLine', array(

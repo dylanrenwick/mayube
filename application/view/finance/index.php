@@ -32,15 +32,20 @@
 			}
 		}
 	</script>
-	<span class='new-list-item-button'>
-		<a href='#' onclick='newSheetClick(event)'>New Sheet</a>
-		<div id='new-sheet-form' style='display:none;'>
-			<form method='get' action='<?= Config::get('URL'); ?>finance/create'>
-				<input id='new-sheet-title' type='text' name='title' placeholder='Title' required />
-				<input type='submit' value='+' />
-			</form>
-		</div>
-	</span>
+	<div class='new-list-item-container'>
+		<span class='new-list-item-button'>
+			<a href='#' onclick='newSheetClick(event)'>New Sheet</a>
+			<div id='new-sheet-form' style='display:none;'>
+				<form method='get' action='<?= Config::get('URL'); ?>finance/create'>
+					<input id='new-sheet-title' type='text' name='title' placeholder='Title' required />
+					<input type='submit' value='+' />
+				</form>
+			</div>
+		</span>
+		<span class='new-list-item-button'>
+			<a href='/finance/cards'>Manage Cards</a>
+		</span>
+	</div>
 <?php } ?>
 
 <!-- echo out the system feedback (error and success messages) -->

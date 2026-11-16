@@ -1,6 +1,8 @@
 <h1>Dylan's Blog</h1>
 <?php if (Session::userIsLoggedIn()) { ?>
-    <span class='new-list-item-button'><a href='post/edit'>New Post</a></span>
+	<div class='new-list-item-container'>
+		<span class='new-list-item-button'><a href='post/edit'>New Post</a></span>
+	</div>
 <?php } ?>
 
 <!-- echo out the system feedback (error and success messages) -->
