@@ -53,15 +53,15 @@ SQL;
 
 		$sql = <<<SQL
 SELECT
-	transaction.id,
-	transaction.amount,
-	transaction.date,
-	transaction.description,
+	t.id,
+	t.amount,
+	t.date,
+	t.description,
 	category.id AS category_id,
 	category.name AS category_name
-FROM transactions AS transaction
+FROM transactions AS t
 	INNER JOIN transaction_categories AS category
-		ON transaction.category_id = category.id
+		ON t.category_id = category.id
 WHERE sheet_id = :sheet_id
 ORDER BY date DESC
 SQL;
