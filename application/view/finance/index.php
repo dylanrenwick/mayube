@@ -11,11 +11,10 @@
 				return;
 			}
 
-			const styles = newSheetForm.attributeStyleMap;
-			const val = styles.get('display');
+			const val = newSheetForm.style.getPropertyValue('display');
 			const isHidden = val == 'none';
+			newSheetForm.style.setProperty('display', isHidden ? 'block' : 'none');
 
-			styles.set('display', isHidden ? 'block' : 'none');
 			if (isHidden) {
 				const titleField = document.getElementById('new-sheet-title');
 				if (titleField === null) {
