@@ -43,7 +43,7 @@
 			</div>
 		</span>
 		<span class='new-list-item-button'>
-			<a href='/finance/cards'>Manage Cards</a>
+			<a href='/cards'>Manage Cards</a>
 		</span>
 	</div>
 <?php } ?>
