@@ -5,5 +5,5 @@ CREATE TABLE IF NOT EXISTS `cards` (
 	`name` TEXT COLLATE NOCASE NOT NULL,
 	`provider` TEXT NOT NULL,
 	`provider_id` INTEGER NOT NULL,
-	CONSTRAINT `name` UNIQUE (`name`),
+	CONSTRAINT `name` UNIQUE (`name`)
 );
