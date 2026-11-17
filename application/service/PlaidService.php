@@ -37,9 +37,12 @@ class PlaidService
 		}
 
 		$result = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+		if (!is_array($result)) {
+			throw new RuntimeException('Plaid returned an invalid response.');
+		}
 
-		if ($status < 200 || $status > 300) {
-			throw new RuntimeException($result['error_message'] ?? "Plaid HTTP {$status}");
+		if ($status < 200 || $status >= 300) {
+			throw new PlaidApiException($result['error_code'] ?? 'UNKNOWN', $result['error_message'] ?? "Plaid HTTP {$status}");
 		}
 
 		return $result;
@@ -59,6 +62,12 @@ class PlaidService
 				],
 			]
 		);
+
+		if (!isset($response['link_token']) || !is_string($response['link_token']) || $response['link_token'] === '') {
+			throw new RuntimeException('Plaid did not return a link token.');
+		}
+
+		return $response['link_token'];
 	}
 
 	public static function exchangePublicToken(string $publicToken): array
@@ -71,6 +80,24 @@ class PlaidService
 		);
 	}
 
+	public static function getAccounts(string $accessToken): array
+	{
+		$response = self::request('/accounts/get', ['access_token' => $accessToken]);
+		$accounts = $response['accounts'] ?? null;
+		if (!is_array($accounts) || $accounts === []) {
+			throw new RuntimeException('Plaid did not return any accounts.');
+		}
+		foreach ($accounts as $account) {
+			if (!is_array($account) || !is_string($account['account_id'] ?? null) || $account['account_id'] === ''
+				|| !is_string($account['name'] ?? null) || !is_string($account['type'] ?? null)
+				|| (isset($account['mask']) && !is_string($account['mask']))
+				|| (isset($account['subtype']) && !is_string($account['subtype']))) {
+				throw new RuntimeException('Plaid returned an invalid account.');
+			}
+		}
+		return $accounts;
+	}
+
 	public static function syncTransactions(string $accessToken, ?string $cursor = null): array
 	{
 		$data = ['access_token' => $accessToken];
@@ -79,6 +106,6 @@ class PlaidService
 			$data['cursor'] = $cursor;
 		}
 
-		return $this->request('/transactions/sync', $data);
+		return self::request('/transactions/sync', $data);
 	}
 }

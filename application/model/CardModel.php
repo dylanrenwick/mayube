@@ -9,7 +9,8 @@ class CardModel
 		$sql = <<<SQL
 SELECT
 	card.id,
-	card.name
+	card.name,
+	card.provider
 FROM cards AS card
 ORDER BY card.id
 SQL;
@@ -19,7 +20,7 @@ SQL;
 		return $query->fetchAll();
 	}
 
-	public static function getCard(int $cardId)
+	public static function getCard(int $cardId): Card|false
 	{
 		$database = DatabaseFactory::getFactory()->getConnection();
 
@@ -37,10 +38,14 @@ SQL;
 		$query->bindValue(':card_id', $cardId, PDO::PARAM_INT);
 		$query->execute();
 
-		return $query->fetch();
+		$card = $query->fetch(PDO::FETCH_OBJ);
+		if ($card === false) {
+			return false;
+		}
+		return new Card((int) $card->id, $card->name, $card->provider, (int) $card->provider_id);
 	}
 
-	public static function createCard(string $cardName, string $cardProvider, int $providerId)
+	public static function createCard(string $cardName, string $cardProvider, int $providerId): int|false
 	{
 		$database = DatabaseFactory::getFactory()->getConnection();
 
@@ -53,15 +58,7 @@ SQL;
 		$query->execute();
 
 		if ($query->rowCount() == 1) {
-			$sql = "SELECT id FROM sheets WHERE name = :card_name LIMIT 1";
-
-			$query = $database->prepare($sql);
-			$query->bindValue(':card_name', $cardName, PDO::PARAM_STR);
-			$query->execute();
-
-			$sheet_id = $query->fetch()->id;
-
-			return $sheet_id;
+			return (int) $database->lastInsertId();
 		}
 
 		// default return

@@ -10,7 +10,7 @@
         "phpunit/phpunit": "11.4.*"
     },
     "autoload": {
-        "psr-4": { "": ["application/core/", "application/model/"] }
+		"psr-4": { "": ["application/core/", "application/model/", "application/service/"] }
     },
     "require": {
         "erusev/parsedown": "^1.7",
