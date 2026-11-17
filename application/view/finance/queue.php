@@ -37,6 +37,7 @@
 						<th scope="col"><input id="queue-select-all" type="checkbox" aria-label="Select all transactions" /></th>
 						<th scope="col">Transaction</th>
 						<th scope="col" class="queue-amount">Amount</th>
+						<th scope="col">Date / time</th>
 						<th scope="col">Card</th>
 						<th scope="col">Transaction type</th>
 					</tr>
@@ -47,6 +48,7 @@
 							<td><input class="queue-row-select" type="checkbox" aria-label="<?= $this->encodeHTML('Select ' . $transaction->description); ?>" /></td>
 							<td><?= $this->encodeHTML((string) $transaction->description); ?></td>
 							<td class="queue-amount">$<?= number_format((float) $transaction->amount, 2); ?></td>
+							<td><?= $this->encodeHTML($transaction->date ?? '—'); ?></td>
 							<td><?= $this->encodeHTML($transaction->card_name . ' (' . ($transaction->card_mask ?? '—') . ')'); ?></td>
 							<td>
 								<select class="queue-type" aria-label="<?= $this->encodeHTML('Transaction type for ' . $transaction->description); ?>">
