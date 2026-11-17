@@ -7,18 +7,26 @@ class Config
 
     private static bool $isLoaded = false;
 
+	public static function load(string $path): bool
+	{
+		if (!file_exists($path)) {
+			return false;
+		}
+
+		self::$config = require $path;
+		self::$isLoaded = true;
+		return true;
+	}
+
     public static function get(string $key): mixed
     {
         if (!self::$isLoaded) {
             $config_file =
-                "../application/config/config." . Environment::get() . ".php";
+                __DIR__ . "/../config/config." . Environment::get() . ".php";
 
-            if (!file_exists($config_file)) {
-                return false;
-            }
-
-            self::$config = require $config_file;
-            self::$isLoaded = true;
+			if (!self::load($config_file)) {
+				return false;
+			}
         }
 
         return self::$config[$key];
