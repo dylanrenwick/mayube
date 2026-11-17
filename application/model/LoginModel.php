@@ -48,11 +48,11 @@ class LoginModel
 
         // reset the failed login counter for that user (if necessary)
         if ($result->last_failed_login > 0) {
-            self::resetFailedLoginCounterOfUser($result->username);
+            self::resetFailedLoginCounterOfUser($result->id);
         }
 
         // save timestamp of this login in the database line of that user
-        self::saveTimestampOfLoginOfUser($result->username);
+        self::saveTimestampOfLoginOfUser($result->id);
 
         // if user has checked the "remember me" checkbox, then write token into database and into cookie
         if ($set_remember_me_cookie) {
@@ -111,7 +111,7 @@ class LoginModel
 
         // if hash of provided password does NOT match the hash in the database: +1 failed-login counter
         if (!password_verify($user_password, $result->password_hash)) {
-            self::incrementFailedLoginCounterOfUser($result->username);
+            self::incrementFailedLoginCounterOfUser($result->id);
             Session::add('feedback_negative', Text::get('FEEDBACK_USERNAME_OR_PASSWORD_WRONG'));
             return false;
         }
@@ -268,16 +268,15 @@ class LoginModel
      *
      * @param $user_name
      */
-    public static function incrementFailedLoginCounterOfUser($username)
+    public static function incrementFailedLoginCounterOfUser($userId)
     {
         $database = DatabaseFactory::getFactory()->getConnection();
 
         $sql = "UPDATE users
                    SET failed_logins = failed_logins+1, last_failed_login = :last_failed_login
-                 WHERE username = :name_or_email OR email = :name_or_email
-                 LIMIT 1";
+                 WHERE id = :user_id";
         $sth = $database->prepare($sql);
-        $sth->execute(array(':name_or_email' => $username, ':last_failed_login' => time() ));
+        $sth->execute(array(':user_id' => $userId, ':last_failed_login' => time() ));
     }
 
     /**
@@ -285,16 +284,15 @@ class LoginModel
      *
      * @param $user_name
      */
-    public static function resetFailedLoginCounterOfUser($username)
+    public static function resetFailedLoginCounterOfUser($userId)
     {
         $database = DatabaseFactory::getFactory()->getConnection();
 
         $sql = "UPDATE users
                    SET failed_logins = 0, last_failed_login = NULL
-                 WHERE username = :username AND failed_logins != 0
-                 LIMIT 1";
+                 WHERE id = :user_id AND failed_logins != 0";
         $sth = $database->prepare($sql);
-        $sth->execute(array(':username' => $username));
+        $sth->execute(array(':user_id' => $userId));
     }
 
     /**
@@ -303,14 +301,14 @@ class LoginModel
      *
      * @param $user_name
      */
-    public static function saveTimestampOfLoginOfUser($username)
+    public static function saveTimestampOfLoginOfUser($userId)
     {
         $database = DatabaseFactory::getFactory()->getConnection();
 
         $sql = "UPDATE users SET last_login_timestamp = :last_login_timestamp
-                WHERE username = :username LIMIT 1";
+                WHERE id = :user_id";
         $sth = $database->prepare($sql);
-        $sth->execute(array(':username' => $username, ':last_login_timestamp' => time()));
+        $sth->execute(array(':user_id' => $userId, ':last_login_timestamp' => time()));
     }
 
     /**
@@ -327,7 +325,7 @@ class LoginModel
         $random_token_string = hash('sha256', mt_rand());
 
         // write that token into database
-        $sql = "UPDATE users SET remember_me_token = :remember_me_token WHERE id = :user_id LIMIT 1";
+        $sql = "UPDATE users SET remember_me_token = :remember_me_token WHERE id = :user_id";
         $sth = $database->prepare($sql);
         $sth->execute(array(':remember_me_token' => $random_token_string, ':user_id' => $user_id));
 
@@ -360,7 +358,7 @@ class LoginModel
 
             $database = DatabaseFactory::getFactory()->getConnection();
 
-            $sql = "UPDATE users SET remember_me_token = :remember_me_token WHERE id = :user_id LIMIT 1";
+            $sql = "UPDATE users SET remember_me_token = :remember_me_token WHERE id = :user_id";
             $sth = $database->prepare($sql);
             $sth->execute(array(':remember_me_token' => null, ':user_id' => $user_id));
         }
