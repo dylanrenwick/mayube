@@ -15,17 +15,10 @@
 		.queue-table .queue-amount { text-align: right; white-space: nowrap; }
 		.queue-table select { width: 100%; min-width: 10rem; }
 	</style>
-	<?php $canAccept = !empty($this->sheets) && !empty($this->transaction_types); ?>
+	<?php $canAccept = !empty($this->transaction_types); ?>
 	<form id="queue-form" method="post" action="<?= $this->encodeHTML(Config::get('URL') . 'finance/reviewQueue'); ?>" novalidate>
 		<input type="hidden" name="csrf_token" value="<?= $this->encodeHTML(Csrf::makeToken()); ?>" />
 		<div class="queue-toolbar">
-			<label for="queue-sheet">Destination sheet</label>
-			<select id="queue-sheet" name="sheet_id">
-				<option value="">Select a sheet</option>
-				<?php foreach ($this->sheets as $sheet) { ?>
-					<option value="<?= (int) $sheet->id; ?>" <?= count($this->sheets) === 1 ? 'selected' : ''; ?>><?= $this->encodeHTML($sheet->title); ?></option>
-				<?php } ?>
-			</select>
 			<button id="queue-accept-all" type="submit" value="accept_all" <?= $canAccept ? '' : 'disabled'; ?>>Accept All</button>
 			<div id="queue-selected-actions" class="queue-actions" hidden>
 				<button type="submit" value="accept" <?= $canAccept ? '' : 'disabled'; ?>>Accept Selected</button>
@@ -33,9 +26,6 @@
 			</div>
 			<span id="queue-selection-count" role="status" aria-live="polite"></span>
 		</div>
-		<?php if (empty($this->sheets)) { ?>
-			<p>Create a sheet before accepting transactions.</p>
-		<?php } ?>
 		<?php if (empty($this->transaction_types)) { ?>
 			<p>Add transaction types before accepting transactions.</p>
 		<?php } ?>
@@ -81,7 +71,6 @@
 			const selectedActions = document.getElementById('queue-selected-actions');
 			const acceptAll = document.getElementById('queue-accept-all');
 			const selectionCount = document.getElementById('queue-selection-count');
-			const sheet = document.getElementById('queue-sheet');
 			const status = document.getElementById('queue-status');
 			let submitting = false;
 			const isSelected = (row) => row.querySelector('.queue-row-select').checked;
@@ -113,7 +102,6 @@
 				const accepting = action !== 'reject';
 				const targetRows = action === 'accept_all' ? rows : rows.filter(isSelected);
 				if (!targetRows.length) return;
-				sheet.required = accepting;
 				rows.forEach((row) => {
 					row.querySelector('.queue-type').required = accepting && targetRows.includes(row);
 				});
@@ -136,7 +124,6 @@
 						body: new URLSearchParams({
 							csrf_token: form.elements.csrf_token.value,
 							action,
-							sheet_id: sheet.value,
 							items: JSON.stringify(items),
 						}),
 					});

@@ -1,175 +1,101 @@
 <?php
 
-/**
- * FinanceModel
- * This is basically a simple CRUD (Create/Read/Update/Delete) demonstration.
- */
 class FinanceModel
 {
-	public static function getAllSheets()
+	public static function getMonthStart(string $month): DateTimeImmutable
 	{
-		$database = DatabaseFactory::getFactory()->getConnection();
+		if (!preg_match('/^(?!0000)\d{4}-(0[1-9]|1[0-2])$/D', $month)) {
+			throw new InvalidArgumentException('Choose a valid month.');
+		}
+		return new DateTimeImmutable($month . '-01');
+	}
 
+	public static function getMonthTransactions(string $userId, string $month): array
+	{
+		$start = self::getMonthStart($month);
+		$database = DatabaseFactory::getFactory()->getConnection();
 		$sql = <<<SQL
-SELECT
-	id,
-	title,
-	created_at,
-	updated_at
-FROM sheets
-ORDER BY created_at DESC
+SELECT transaction_record.id, transaction_record.amount, transaction_record.date,
+	transaction_record.description, category.id AS category_id,
+	category.name AS category_name, card.name AS card_name
+FROM transactions AS transaction_record
+JOIN transaction_categories AS category ON category.id = transaction_record.category_id
+LEFT JOIN cards AS card ON card.id = transaction_record.card_id
+WHERE transaction_record.user_id = :user_id
+	AND transaction_record.date >= :month_start
+	AND transaction_record.date < :next_month
+ORDER BY transaction_record.date DESC, transaction_record.id DESC
 SQL;
 		$query = $database->prepare($sql);
-		$query->execute();
-
-		return $query->fetchAll();
-	}
-
-	public static function getSheet($sheet_id)
-	{
-		$database = DatabaseFactory::getFactory()->getConnection();
-
-		$sql = <<<SQL
-SELECT
-		sheet.id,
-		sheet.title,
-		sheet.created_at,
-		sheet.updated_at
-FROM sheets AS sheet
-WHERE id = :sheet_id
-ORDER BY created_at DESC
-LIMIT 1
-SQL;
-		$query = $database->prepare($sql);
-		$query->bindValue(':sheet_id', $sheet_id, PDO::PARAM_INT);
-		$query->execute();
-
-		return $query->fetch();
-	}
-
-	public static function getSheetTransactions($sheet_id)
-	{
-		$database = DatabaseFactory::getFactory()->getConnection();
-
-		$sql = <<<SQL
-SELECT
-	t.id,
-	t.amount,
-	t.date,
-	t.description,
-	category.id AS category_id,
-	category.name AS category_name
-FROM transactions AS t
-	INNER JOIN transaction_categories AS category
-		ON t.category_id = category.id
-WHERE sheet_id = :sheet_id
-ORDER BY date DESC
-SQL;
-		$query = $database->prepare($sql);
-		$query->bindValue(':sheet_id', $sheet_id, PDO::PARAM_INT);
-		$query->execute();
-
-		return $query->fetchAll();
-	}
-
-	public static function getAllCategories()
-	{
-		$database = DatabaseFactory::getFactory()->getConnection();
-
-		$sql = "SELECT id, name FROM transaction_categories";
-
-		$query = $database->prepare($sql);
-		$query->execute();
-
-		return $query->fetchAll();
-	}
-
-	public static function createSheet($sheet_title)
-	{
-		$database = DatabaseFactory::getFactory()->getConnection();
-
-		$sql = "INSERT INTO sheets (title) VALUES (:sheet_title)";
-
-		$query = $database->prepare($sql);
-		$query->bindValue(':sheet_title', $sheet_title, PDO::PARAM_STR);
-		$query->execute();
-
-		if ($query->rowCount() == 1) {
-			$sql = "SELECT id FROM sheets WHERE title = :sheet_title LIMIT 1";
-
-			$query = $database->prepare($sql);
-			$query->bindValue(':sheet_title', $sheet_title, PDO::PARAM_STR);
-			$query->execute();
-
-			$sheet_id = $query->fetch()->id;
-
-			return $sheet_id;
+		if (!$query->execute([
+			':user_id' => $userId,
+			':month_start' => $start->format('Y-m-d'),
+			':next_month' => $start->modify('+1 month')->format('Y-m-d'),
+		])) {
+			throw new RuntimeException('Unable to retrieve transactions.');
 		}
-
-		// default return
-		Session::add('feedback_negative', Text::get('FEEDBACK_NOTE_CREATION_FAILED'));
-		return false;
+		return $query->fetchAll(PDO::FETCH_OBJ);
 	}
 
-	public static function createTransaction($sheet_id, $amount, $description, $category_id, $date)
+	public static function getAllCategories(): array
 	{
 		$database = DatabaseFactory::getFactory()->getConnection();
-
-		$sql = "INSERT INTO transactions (amount, description, sheet_id, category_id, date) VALUES (:amount, :desc, :sheet_id, :category_id, :date)";
-
-		$query = $database->prepare($sql);
-		// PARAM_STR is the 'correct' way to bind a float
-		// src: https://www.php.net/manual/en/pdo.constants.php#129168
-		$query->bindValue(':amount', $amount, PDO::PARAM_STR);
-		$query->bindValue(':desc', $description, PDO::PARAM_STR);
-		$query->bindValue(':sheet_id', $sheet_id, PDO::PARAM_INT);
-		$query->bindValue(':category_id', $category_id, PDO::PARAM_INT);
-		$query->bindValue(':date', $date, PDO::PARAM_STR);
-		$query->execute();
-
-		if ($query->rowCount() == 1) {
-			$sql = "SELECT id FROM transactions WHERE amount = :amount AND description = :desc AND sheet_id = :sheet_id AND category_id = :category_id LIMIT 1";
-
-			$query = $database->prepare($sql);
-			// PARAM_STR is the 'correct' way to bind a float
-			// src: https://www.php.net/manual/en/pdo.constants.php#129168
-			$query->bindValue(':amount', $amount, PDO::PARAM_STR);
-			$query->bindValue(':desc', $description, PDO::PARAM_STR);
-			$query->bindValue(':sheet_id', $sheet_id, PDO::PARAM_INT);
-			$query->bindValue(':category_id', $category_id, PDO::PARAM_INT);
-			$query->execute();
-
-			$sheet_id = $query->fetch()->id;
-
-			return $sheet_id;
+		$query = $database->prepare('SELECT id, name FROM transaction_categories ORDER BY name, id');
+		if (!$query->execute()) {
+			throw new RuntimeException('Unable to retrieve transaction types.');
 		}
-
-		// default return
-		Session::add('feedback_negative', Text::get('FEEDBACK_NOTE_CREATION_FAILED'));
-		return false;
+		return $query->fetchAll(PDO::FETCH_OBJ);
 	}
 
-	public static function updateTransaction($id, $amount, $description, $category_id, $date)
+	public static function createTransaction(string $userId, string $amount, string $description, int $categoryId, string $date): int
 	{
+		self::validateTransaction($amount, $description, $categoryId, $date);
 		$database = DatabaseFactory::getFactory()->getConnection();
-
-		$sql = "UPDATE transactions SET amount = :amount, description = :desc, category_id = :category_id, date = :date WHERE id = :id";
-
-		$query = $database->prepare($sql);
-		// PARAM_STR is the 'correct' way to bind a float
-		// src: https://www.php.net/manual/en/pdo.constants.php#129168
-		$query->bindValue(':amount', $amount, PDO::PARAM_STR);
-		$query->bindValue(':desc', $description, PDO::PARAM_STR);
-		$query->bindValue(':category_id', $category_id, PDO::PARAM_INT);
-		$query->bindValue(':id', $id, PDO::PARAM_INT);
-		$query->bindValue(':date', $date, PDO::PARAM_STR);
-		$query->execute();
-
-		if ($query->rowCount() != 1) {
-			Session::add('feedback_negative', 'Failed to update transaction' . var_export($query->errorInfo(), true));
-			return false;
+		$query = $database->prepare('INSERT INTO transactions (user_id, amount, description, category_id, date) VALUES (:user_id, :amount, :description, :category_id, :date)');
+		if (!$query->execute([
+			':user_id' => $userId,
+			':amount' => $amount,
+			':description' => trim($description),
+			':category_id' => $categoryId,
+			':date' => $date,
+		])) {
+			throw new RuntimeException('Unable to create transaction.');
 		}
+		return (int) $database->lastInsertId();
+	}
 
-		return true;
+	public static function updateTransaction(string $userId, int $id, string $amount, string $description, int $categoryId, string $date): bool
+	{
+		self::validateTransaction($amount, $description, $categoryId, $date);
+		$database = DatabaseFactory::getFactory()->getConnection();
+		$query = $database->prepare('UPDATE transactions SET amount = :amount, description = :description, category_id = :category_id, date = :date WHERE id = :id AND user_id = :user_id');
+		if (!$query->execute([
+			':amount' => $amount,
+			':description' => trim($description),
+			':category_id' => $categoryId,
+			':date' => $date,
+			':id' => $id,
+			':user_id' => $userId,
+		])) {
+			throw new RuntimeException('Unable to update transaction.');
+		}
+		return $query->rowCount() === 1;
+	}
+
+	private static function validateTransaction(string $amount, string $description, int $categoryId, string $date): void
+	{
+		$parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+		if (!is_numeric($amount) || !is_finite((float) $amount) || trim($description) === ''
+			|| $parsedDate === false || $parsedDate->format('Y-m-d') !== $date || substr($date, 0, 4) === '0000') {
+			throw new InvalidArgumentException('Enter a valid amount, name and date.');
+		}
+		$database = DatabaseFactory::getFactory()->getConnection();
+		$query = $database->prepare('SELECT id FROM transaction_categories WHERE id = :category_id');
+		if (!$query->execute([':category_id' => $categoryId])) {
+			throw new RuntimeException('Unable to retrieve transaction type.');
+		}
+		if ($query->fetchColumn() === false) {
+			throw new InvalidArgumentException('Choose a valid transaction type.');
+		}
 	}
 }

@@ -78,7 +78,7 @@ SQL;
 	}
 
 	/** Accept/reject only owned, net-new additions; all changes are atomic. */
-	public static function reviewAdditions(string $userId, string $action, array $items, ?int $sheetId): int
+	public static function reviewAdditions(string $userId, string $action, array $items): int
 	{
 		if (!in_array($action, ['accept', 'accept_all', 'reject'], true) || $items === []) {
 			throw new InvalidArgumentException('Select transactions to review.');
@@ -111,11 +111,6 @@ SQL;
 			}
 
 			if ($accepting) {
-				$sheet = $database->prepare('SELECT id FROM sheets WHERE id = :sheet_id');
-				$sheet->execute([':sheet_id' => $sheetId]);
-				if ($sheetId === null || $sheet->fetchColumn() === false) {
-					throw new InvalidArgumentException('Choose a destination sheet.');
-				}
 				$categories = $database->query('SELECT id FROM transaction_categories')->fetchAll(PDO::FETCH_COLUMN);
 				$validCategories = array_fill_keys(array_map('intval', $categories), true);
 				foreach ($requested as $categoryId) {
@@ -123,7 +118,7 @@ SQL;
 						throw new InvalidArgumentException('Choose a valid transaction type for every transaction being accepted.');
 					}
 				}
-				$insert = $database->prepare('INSERT INTO transactions (amount, description, date, sheet_id, category_id, card_id, provider_transaction_id) VALUES (:amount, :description, :date, :sheet_id, :category_id, :card_id, :provider_transaction_id)');
+				$insert = $database->prepare('INSERT INTO transactions (user_id, amount, description, date, category_id, card_id, provider_transaction_id) VALUES (:user_id, :amount, :description, :date, :category_id, :card_id, :provider_transaction_id)');
 			}
 			$delete = $database->prepare("DELETE FROM queued_transactions WHERE id = :id AND change_type = 'added'");
 			foreach ($requested as $id => $categoryId) {
@@ -136,7 +131,7 @@ SQL;
 						':amount' => $transaction->amount,
 						':description' => $transaction->description,
 						':date' => $transaction->date,
-						':sheet_id' => $sheetId,
+						':user_id' => $userId,
 						':category_id' => $categoryId,
 						':card_id' => $transaction->card_id,
 						':provider_transaction_id' => $transaction->provider_transaction_id,

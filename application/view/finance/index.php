@@ -1,66 +1,9 @@
-<h1>Finance Sheets</h1>
-<?php if (Session::userIsLoggedIn()) { ?>
-	<script>
-		function newSheetClick(event) {
-			event.preventDefault();
-			console.log('click');
-			
-			const newSheetForm = document.getElementById('new-sheet-form');
-			if (newSheetForm === null) {
-				console.error("Could not find '#new-sheet-form'");
-				return;
-			}
+<h3>Finance</h3>
 
-			const val = newSheetForm.style.getPropertyValue('display');
-			const isHidden = val == 'none';
-			newSheetForm.style.setProperty('display', isHidden ? 'block' : 'none');
-
-			if (isHidden) {
-				const titleField = document.getElementById('new-sheet-title');
-				if (titleField === null) {
-					console.error("Could not find '#new-sheet-title'");
-					return;
-				}
-				if (titleField.value.length <= 0) {
-					const date = new Date();
-					const month = date.toLocaleString('default', { month: 'long' });
-					const year = date.toLocaleString('default', { year: 'numeric' });
-					const defaultTitle = `${month}, ${year}`;
-					console.log(defaultTitle);
-					titleField.value = defaultTitle;
-				}
-			}
-		}
-	</script>
-	<div class='new-list-item-container'>
-		<span class='new-list-item-button'>
-			<a href='#' onclick='newSheetClick(event)'>New Sheet</a>
-			<div id='new-sheet-form' style='display:none;'>
-				<form method='get' action='<?= Config::get('URL'); ?>finance/create'>
-					<input id='new-sheet-title' type='text' name='title' placeholder='Title' required />
-					<input type='submit' value='+' />
-				</form>
-			</div>
-		</span>
-		<span class='new-list-item-button'>
-			<a href='/cards'>Manage Cards</a>
-		</span>
-		<span class='new-list-item-button'>
-			<a href='<?= $this->encodeHTML(Config::get('URL') . 'finance/queue'); ?>'>Transaction Queue</a>
-		</span>
-	</div>
-<?php } ?>
-
-<!-- echo out the system feedback (error and success messages) -->
 <?php $this->renderFeedbackMessages(); ?>
 
-<?php if ($this->sheets) { ?>
-    <?php foreach($this->sheets as $key => $value) { ?>
-        <a href='<?= Config::get('URL'); ?>finance/sheet/<?= $value->id; ?>' class="list-item">
-            <span href='' class="list-item-title"><?= $value->title; ?>
-            <span class="list-item-footer">Created on <?= $value->created_at ?></span>
-        </a>
-    <?php } ?>
-<?php } else { ?>
-    <div>No sheets found.</div>
-<?php } ?>
+<nav aria-label="Finance">
+	<a class="list-item" href="<?= $this->encodeHTML(Config::get('URL') . 'cards'); ?>">Manage Cards</a>
+	<a class="list-item" href="<?= $this->encodeHTML(Config::get('URL') . 'finance/queue'); ?>">Transaction Queue</a>
+	<a class="list-item" href="<?= $this->encodeHTML(Config::get('URL') . 'finance/sheets'); ?>">Sheets</a>
+</nav>

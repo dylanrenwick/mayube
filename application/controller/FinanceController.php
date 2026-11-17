@@ -16,9 +16,7 @@ class FinanceController extends Controller
 	
 	public function index(): void
 	{
-		$this->View->render('finance/index', [
-			"sheets" => FinanceModel::getAllSheets()
-		]);
+		$this->View->render('finance/index');
 	}
 
 	public function queue(): void
@@ -27,7 +25,6 @@ class FinanceController extends Controller
 		$this->View->render('finance/queue', [
 			'transactions' => QueuedTransactionModel::getAdditionsForUser((string) Session::get('user_id')),
 			'transaction_types' => FinanceModel::getAllCategories(),
-			'sheets' => FinanceModel::getAllSheets(),
 		]);
 	}
 
@@ -56,13 +53,7 @@ class FinanceController extends Controller
 			if (!is_array($items)) {
 				throw new InvalidArgumentException('Invalid transaction selection.');
 			}
-			$sheetId = $_POST['sheet_id'] ?? null;
-			$sheetId = is_string($sheetId)
-				? filter_var($sheetId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
-				: false;
-			$count = QueuedTransactionModel::reviewAdditions(
-				(string) Session::get('user_id'), $action, $items, $sheetId === false ? null : $sheetId
-			);
+			$count = QueuedTransactionModel::reviewAdditions((string) Session::get('user_id'), $action, $items);
 			$verb = $action === 'reject' ? 'Rejected' : 'Accepted';
 			Session::add('feedback_positive', $verb . ' ' . $count . ' transaction' . ($count === 1 ? '.' : 's.'));
 			$this->View->renderJSON(['success' => true, 'count' => $count]);
@@ -78,95 +69,110 @@ class FinanceController extends Controller
 		}
 	}
 
-	public function sheet(int $sheet_id): void
+	public function sheets(): void
 	{
-		$sheet = FinanceModel::getSheet($sheet_id);
-		if ($sheet === false) {
-			$controller = new ErrorController();
-			$controller->error404();
+		$month = $_GET['month'] ?? date('Y-m');
+		try {
+			if (!is_string($month)) {
+				throw new InvalidArgumentException('Choose a valid month.');
+			}
+			$monthStart = FinanceModel::getMonthStart($month);
+		} catch (InvalidArgumentException $exception) {
+			Session::add('feedback_negative', $exception->getMessage());
+			Redirect::to('finance/sheets');
 			return;
 		}
 
-		$this->View->renderMetaPreview($sheet->title, "", "");
-		$this->View->render("finance/sheet", [
-			"sheet" => $sheet,
-			"transactions" => FinanceModel::getSheetTransactions($sheet_id),
-			"categories" => FinanceModel::getAllCategories(),
+		header('Cache-Control: no-store');
+		$this->View->render('finance/sheet', [
+			'month' => $month,
+			'month_title' => $monthStart->format('F Y'),
+			'default_date' => $month === date('Y-m') ? date('Y-m-d') : $monthStart->format('Y-m-d'),
+			'transactions' => FinanceModel::getMonthTransactions((string) Session::get('user_id'), $month),
+			'categories' => FinanceModel::getAllCategories(),
 		]);
 	}
 
-	public function create(): void
+	public function sheet(): void
 	{
-		$sheet_title = Request::get('title');
-		if (!$sheet_title) {
-			Redirect::to('finance/index');
-			return;
-		}
-		$sheet_id = FinanceModel::createSheet($sheet_title);
-		if ($sheet_id === false) {
-			Redirect::to('finance/index');
-			return;
-		}
-
-		Redirect::to('finance/sheet/'.$sheet_id);	
+		$this->sheets();
 	}
 
 	public function createTransaction(): void
 	{
-		$sheet_id = Request::get('sheet_id');
-		$amount = Request::get('amount');
-		$description = Request::get('title');
-		$category_id = Request::get('category');
-		$timestamp = Request::get('timestamp');
-
-		FinanceModel::createTransaction(
-			$sheet_id,
-			$amount,
-			$description,
-			$category_id,
-			$timestamp
-		);
-
-		Redirect::to('finance/sheet/'.$sheet_id);	
+		if (!$this->validateTransactionPost()) {
+			return;
+		}
+		try {
+			[$amount, $description, $categoryId, $date] = $this->transactionInput();
+			FinanceModel::createTransaction((string) Session::get('user_id'), $amount, $description, $categoryId, $date);
+			Session::add('feedback_positive', 'Transaction created.');
+			Redirect::to('finance/sheets?month=' . rawurlencode(substr($date, 0, 7)));
+			return;
+		} catch (InvalidArgumentException $exception) {
+			Session::add('feedback_negative', $exception->getMessage());
+		} catch (Throwable $exception) {
+			Session::add('feedback_negative', 'Unable to create transaction. Please try again.');
+		}
+		$month = $_POST['month'] ?? '';
+		Redirect::to('finance/sheets' . (is_string($month) ? '?month=' . rawurlencode($month) : ''));
 	}
 
 	public function updateTransaction(): void
 	{
-		$id = Request::get('transaction_id');
-		$amount = Request::get('amount');
-		$description = Request::get('title');
-		$category_id = Request::get('category');
-		$timestamp = Request::get('timestamp');
-
-		$success = FinanceModel::updateTransaction(
-			$id,
-			$amount,
-			$description,
-			$category_id,
-			$timestamp
-		);
-
-		if ($success) {
-			$this->View->renderJSON([
-				'success' => true,
-				'new_state' => [
-					'amount' => $amount,
-					'title' => $description,
-					'category' => $category_id,
-					'date' => $timestamp
-				]
-			]);
-		} else {
-			$this->View->renderJSON([
-				'success' => false,
-				'input' => [
-					'id' => $id,
-					'amount' => $amount,
-					'title' => $description,
-					'category' => $category_id,
-					'date' => $timestamp
-				]
-			]);
+		if (!$this->validateTransactionPost()) {
+			return;
 		}
+		try {
+			$id = $_POST['transaction_id'] ?? null;
+			$id = is_string($id) ? filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : false;
+			if ($id === false) {
+				throw new InvalidArgumentException('A valid transaction ID is required.');
+			}
+			[$amount, $description, $categoryId, $date] = $this->transactionInput();
+			if (!FinanceModel::updateTransaction((string) Session::get('user_id'), $id, $amount, $description, $categoryId, $date)) {
+				http_response_code(404);
+				$this->View->renderJSON(['error' => 'Transaction not found.']);
+				return;
+			}
+			$this->View->renderJSON(['success' => true]);
+		} catch (InvalidArgumentException $exception) {
+			http_response_code(400);
+			$this->View->renderJSON(['error' => $exception->getMessage()]);
+		} catch (Throwable $exception) {
+			http_response_code(500);
+			$this->View->renderJSON(['error' => 'Unable to update transaction. Please try again.']);
+		}
+	}
+
+	private function validateTransactionPost(): bool
+	{
+		header('Cache-Control: no-store');
+		if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+			header('Allow: POST');
+			http_response_code(405);
+			$this->View->renderJSON(['error' => 'This endpoint requires a POST request.']);
+			return false;
+		}
+		if (!is_string($_POST['csrf_token'] ?? null) || !Csrf::isTokenValid()) {
+			http_response_code(403);
+			$this->View->renderJSON(['error' => 'Invalid form token. Reload the page and try again.']);
+			return false;
+		}
+		return true;
+	}
+
+	private function transactionInput(): array
+	{
+		foreach (['amount', 'title', 'category', 'timestamp'] as $key) {
+			if (!is_string($_POST[$key] ?? null)) {
+				throw new InvalidArgumentException('Enter an amount, name, transaction type and date.');
+			}
+		}
+		$categoryId = filter_var($_POST['category'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+		if ($categoryId === false) {
+			throw new InvalidArgumentException('Choose a valid transaction type.');
+		}
+		return [$_POST['amount'], $_POST['title'], $categoryId, $_POST['timestamp']];
 	}
 }
