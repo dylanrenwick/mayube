@@ -52,7 +52,7 @@ class AvatarModel
         $query = $database->prepare("SELECT has_avatar FROM users WHERE id = :user_id LIMIT 1");
         $query->execute(array(':user_id' => $user_id));
 
-        if ($query->fetch()->user_has_avatar) {
+        if ($query->fetch()->has_avatar) {
             return Config::get('URL') . Config::get('PATH_AVATARS_PUBLIC') . $user_id . '.jpg';
         }
 
