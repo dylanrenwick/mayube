@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS `transactions` (
 	`date` TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`sheet_id` INTEGER NOT NULL CHECK (typeof(`sheet_id`) = 'integer' AND `sheet_id` BETWEEN 0 AND 4294967295),
 	`category_id` INTEGER NOT NULL CHECK (typeof(`category_id`) = 'integer' AND `category_id` BETWEEN 0 AND 4294967295),
+	`card_id` INTEGER DEFAULT NULL,
+	`provider_transaction_id` TEXT DEFAULT NULL,
+	UNIQUE (`card_id`, `provider_transaction_id`),
 	FOREIGN KEY (`sheet_id`) REFERENCES `sheets` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-	FOREIGN KEY (`category_id`) REFERENCES `transaction_categories` (`id`) ON UPDATE CASCADE
+	FOREIGN KEY (`category_id`) REFERENCES `transaction_categories` (`id`) ON UPDATE CASCADE,
+	FOREIGN KEY (`card_id`) REFERENCES `cards` (`id`) ON DELETE RESTRICT
 );

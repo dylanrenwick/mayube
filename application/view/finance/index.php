@@ -45,6 +45,9 @@
 		<span class='new-list-item-button'>
 			<a href='/cards'>Manage Cards</a>
 		</span>
+		<span class='new-list-item-button'>
+			<a href='<?= $this->encodeHTML(Config::get('URL') . 'finance/queue'); ?>'>Transaction Queue</a>
+		</span>
 	</div>
 <?php } ?>
 
